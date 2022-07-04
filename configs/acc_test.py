@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2016 Jason Lowe-Power
+# Copyright (c) 2017 Jason Lowe-Power
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,17 +25,39 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-Import('*')
+"""
+A simple run file that creates two SimObjects: HelloObject and GoodbyeObject
+and then runs the simulation. Using the debug "Hello" is informative.
 
-SimObject('SimpleAccelObj.py', sim_objects=['SimpleAccelObj'])
-SimObject('SpadMem.py', sim_objects=['SpadMem'])
-SimObject('PimCore.py', sim_objects=['PimCore'])
+IMPORTANT: If you modify this file, it's likely that the Learning gem5 book
+           also needs to be updated. For now, email Jason <power.jg@gmail.com>
+
+"""
+
+# import the m5 (gem5) library created when gem5 is built
+import m5
+# import all of the SimObjects
+from m5.objects import *
+
+# set up the root SimObject and start the simulation
+root = Root(full_system = False)
+root.acc = SimpleAccelObj()
+
+root.acc.clk_domain = SrcClockDomain()
+root.acc.clk_domain.clock = '233MHz'
+root.acc.clk_domain.voltage_domain = VoltageDomain()
+
+root.acc.spadMem = SpadMem()
+root.acc.pimCore = PimCore()
+root.acc.spadMem.dataPort = root.acc.pimCore.dataPort
+print(root.acc.pimCore.interuptPort)
+print(root.acc.interuptPort)
+root.acc.interuptPort = root.acc.pimCore.interuptPort
 
 
-Source('simple_accelobj.cc')
-Source('spad_mem.cc')
-Source('pim_core.cc')
+# instantiate all of the objects we've created above
+m5.instantiate()
 
-DebugFlag('SimpleAccelObj')
-DebugFlag('SpadMem')
-DebugFlag('PimCore')
+print("Beginning simulation!")
+exit_event = m5.simulate()
+print('Exiting @ tick %i because %s' % (m5.curTick(), exit_event.getCause()))
