@@ -1,3 +1,8 @@
+#gem5 generated
+/build
+m5out
+
+
 # Prerequisites
 *.d
 

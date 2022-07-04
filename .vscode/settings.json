@@ -1,0 +1,7 @@
+{
+    "C_Cpp.clang_format_fallbackStyle": "LLVM",
+    "C_Cpp.clang_format_style": "LLVM",
+    "python.analysis.extraPaths": [
+        "./gem5/src/python"
+    ]
+}
