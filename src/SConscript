@@ -1,5 +1,7 @@
 Import('*')
 
-SimObject('SimpleObject.py', sim_objects=['SimpleObject'])
+SimObject('PIMIODev.py', sim_objects=['PIMIODev'])
 
-Source('simple_object.cc')
+Source('pimio_dev.cc')
+
+DebugFlag("PIMIODev")
