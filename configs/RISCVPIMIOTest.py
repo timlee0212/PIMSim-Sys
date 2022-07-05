@@ -85,14 +85,14 @@ system.membus = SystemXBar()
 # Configure Cache
 system.cache_line_size = 64
 
-system.l2 = L2Cache(clk_domain=system.clk_domain)
+system.l2 = L2Cache(clk_domain=system.clk_domain, size="2MB")
 
 system.tol2bus = L2XBar(clk_domain = system.clk_domain)
 system.l2.cpu_side = system.tol2bus.mem_side_ports
 system.l2.mem_side = system.membus.cpu_side_ports
 
-icache = L1_ICache()
-dcache = L1_DCache()
+icache = L1_ICache(size="32kB")
+dcache = L1_DCache(size="64kB")
 
 iwalkcache = PageTableWalkerCache()
 dwalkcache = PageTableWalkerCache()
@@ -164,7 +164,8 @@ root = Root(full_system = False, system = system)
 # instantiate all of the objects we've created above
 m5.instantiate()
 
-system.cpu.workload[0].map( Addr(0x100000000), x86IOAddress(0x3C0), int(32), False)
+system.cpu.workload[0].map( Addr(0x200000000), x86IOAddress(0x3C0), int(32), False)
+system.cpu.workload[0].map( Addr(0x1000000), Addr(0x1000000), int(4096), False)
 
 print("Beginning simulation!")
 exit_event = m5.simulate()
