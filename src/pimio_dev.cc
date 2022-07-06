@@ -26,30 +26,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "src/pimio_dev.hh"
+#include "pimio_dev.hh"
 
 #include "debug/PIMIODev.hh"
 #include "dev/dma_device.hh"
 #include "mem/packet_access.hh"
 #include "params/PIMIODev.hh"
-
-/* Shared fields for CTRL and STAT registers */
-#define PIMIO_DEV_TYPE 0x2
-#define PIMIO_CMD_COMP 0x1
-
-/* Specific fields for CTRL */
-#define PIMIO_DEV_IRQE 0x1
-
-/* Specific fields for STAT */
-#define PIMIO_DEV_BUSY 0x1
-#define PIMIO_DEV_ERRR 0x4
+#include "pimio_defines.hh"
 
 namespace gem5 {
 
 PIMIODev::PIMIODev(const Params &params)
     : DmaDevice(params),
-      //platform(params.platform),
+      // platform(params.platform),
       dmaEvent([this] { dmaEventDone(); }, name()),
+      _driver(nullptr),
       pioAddr(params.pio_addr),
       pioSize(params.pio_size),
       PIMDevIntID(params.int_id),
@@ -57,7 +48,7 @@ PIMIODev::PIMIODev(const Params &params)
       nbyte_bl(params.cb_nb_bl) {
     gem5_assert(n_wl * nbyte_bl <= cb_store.max_size(),
                 "Selected PIM size exceed possible space for data structure!");
-    cb_store.reserve(nbyte_bl * n_wl);
+    cb_store.assign(nbyte_bl * n_wl, 0);
     DPRINTF(
         PIMIODev,
         "PIM IO Device initalized!\nPIM Size: %d Bytes x %d words, at %llx\n",
@@ -69,11 +60,13 @@ void PIMIODev::dmaEventDone() {
     if (writeOp) {
         memcpy((void *)(cb_store.data() + _offset), (void *)reqData, reqLen);
     }
-
     delete[] reqData;
     busy = false;
     DPRINTF(PIMIODev, "Done with DMA event\n");
-    //platform->postPciInt(PIMDevIntID);
+    if (_driver) {
+        _driver->signalWakeup();
+    }
+    // platform->postPciInt(PIMDevIntID);
 }
 
 uint64_t PIMIODev::PIMRegRead(const uint8_t addr) {
@@ -113,7 +106,7 @@ uint64_t PIMIODev::PIMRegRead(const uint8_t addr) {
             DPRINTF(PIMIODev, "Read PIMIO_DEV_STAT: %d\n", r);
 
             // Acknowledge IRQ
-            //platform->clearPciInt(PIMDevIntID);
+            // platform->clearPciInt(PIMDevIntID);
             break;
 
         default:
@@ -174,15 +167,16 @@ void PIMIODev::PIMCmd(void) {
     // Check parameters
     if ((uint16_t)wl_addr > n_wl) {
         panic("Bad Wordline Address!\n");
-    }else if(!compOp && reqLen%nbyte_bl!=0){
+    } else if (!compOp && reqLen % nbyte_bl != 0) {
         panic("Read/Write length must align with the crossbar width!\n");
     }
-
+    DPRINTF(PIMIODev, "Execute Command, Write:%s, Compute:%s\n",
+            writeOp ? "true" : "false", compOp ? "true" : "false");
     // Device is busy when a transfer occurs
     busy = true;
 
     // Perform transfer
-    reqData = new uint8_t(reqLen);
+    reqData = new uint8_t[reqLen];
     int64_t _offset = nbyte_bl * wl_addr;
 
     // TODO: Modify to correct PIM behavior. Currently we assume 8bit uint
@@ -191,8 +185,8 @@ void PIMIODev::PIMCmd(void) {
         for (int i = 0; i < nbyte_bl; i++) {
             reqData[i] = static_cast<uint8_t>(cb_store[_offset + i] * src_op);
         }
-    }else if(!writeOp){
-        memcpy(reqData, cb_store.data(), reqLen);
+    } else if (!writeOp) {
+        memcpy(reqData, cb_store.data() + _offset, reqLen);
     }
     if (!writeOp) {
         // Read command (block -> mem)
@@ -235,4 +229,39 @@ Tick PIMIODev::write(PacketPtr pkt) {
 
     return pioDelay;
 }
+
+// SE Functionalities
+uint64_t PIMIODev::SE_RegRead(const uint8_t addr) {
+    gem5_assert(!FullSystem,
+                "This function should only be accessed in SE mode.");
+    return PIMRegRead(addr);
+}
+void PIMIODev::SE_RegWrite(const uint8_t addr, uint64_t val64) {
+    gem5_assert(!FullSystem,
+                "This function should only be accessed in SE mode.");
+    PIMRegWrite(addr, val64);
+}
+void PIMIODev::SE_PIMCmd(bool write, bool compute) {
+    gem5_assert(!FullSystem,
+                "This function should only be accessed in SE mode.");
+    if (!busy) {
+        err = false;
+        compOp = compute;
+        writeOp = write;
+        PIMCmd();
+    } else {
+        panic(
+            "Attempting to write to PIMIO device while transfer"
+            " is ongoing!\n");
+    }
+}
+
+void PIMIODev::attachDriver(PIMIODriver *driver) {
+    fatal_if(_driver, "Should not overwrite driver.");
+    _driver = driver;
+    assert(_driver);
+}
+
+PIMIODriver *PIMIODev::driver() const { return _driver; }
+
 }  // namespace gem5

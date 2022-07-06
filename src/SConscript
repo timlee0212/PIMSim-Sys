@@ -1,7 +1,8 @@
 Import('*')
 
-SimObject('PIMIODev.py', sim_objects=['PIMIODev'])
+SimObject('PIMIODev.py', sim_objects=['PIMIODev', 'PIMIODriver'])
 
 Source('pimio_dev.cc')
+Source('pimio_driver.cc')
 
 DebugFlag("PIMIODev")
