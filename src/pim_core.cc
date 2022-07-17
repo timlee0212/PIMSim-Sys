@@ -1,3 +1,4 @@
+#include "src/pim_accel.hh"
 #include "src/pim_core.hh"
 
 #include "base/logging.hh"
@@ -12,11 +13,11 @@ PimCore::PimCore(const PimCoreParams &params)
       dataReadEvent(this),
       computeEvent(this),
       dataWriteEvent(this),
-      interuptPort(name() + ".interuptPort", this),
       dataPort(name() + ".dataPort", this),
       dataReadState(Idle),
       computeState(Idle),
-      dataWriteState(Idle)
+      dataWriteState(Idle),
+      accel(params.accel)
 // accel(params.accel)
 {
     DPRINTF(PimCore, "Created the PimCore object\n");
@@ -26,17 +27,29 @@ PimCore::PimCore(const PimCoreParams &params)
     req = std::make_shared<Request>(addr, size, flags, 0);
 }
 
-bool PimCore::isIdle() {
+void 
+PimCore::init()
+{
+    accel->registerPimCore(this);
+}
+
+bool
+PimCore::isIdle() 
+{
     return (dataReadState == Idle && computeState == Idle &&
             dataWriteState == Idle);
 }
 
-void PimCore::start() {
+void
+PimCore::start() 
+{
     DPRINTF(PimCore, "Tiggerred PIM Core.\n");
     schedule(dataReadEvent, clockEdge(Cycles(1)));
 }
 
-void PimCore::dataRead() {
+void
+PimCore::dataRead() 
+{
     dataReadState = Busy;
     DPRINTF(PimCore, "Request for data fetch.\n");
     PacketPtr pkt = Packet::createRead(req);
@@ -44,7 +57,9 @@ void PimCore::dataRead() {
     dataPort.sendTimingReq(pkt);
 }
 
-bool PimCore::DataPort::recvTimingResp(PacketPtr pkt) {
+bool 
+PimCore::DataPort::recvTimingResp(PacketPtr pkt) 
+{
     if (pkt->isRead()) {
         pimcore->dataReadState = Idle;
         pimcore->compute();
@@ -55,7 +70,9 @@ bool PimCore::DataPort::recvTimingResp(PacketPtr pkt) {
     return true;
 }
 
-void PimCore::compute() {
+void 
+PimCore::compute() 
+{
     if (computeState == Idle) {
         computeState = Busy;
         DPRINTF(PimCore, "Start to compute.\n");
@@ -67,7 +84,8 @@ void PimCore::compute() {
     }
 }
 
-void PimCore::dataWrite() {
+void 
+PimCore::dataWrite() {
     dataWriteState = Busy;
     DPRINTF(PimCore, "Write back data.\n");
     PacketPtr pkt = Packet::createWrite(req);
@@ -75,17 +93,11 @@ void PimCore::dataWrite() {
     dataPort.sendTimingReq(pkt);
 }
 
-void PimCore::finish() {
+void 
+PimCore::finish() {
     DPRINTF(PimCore, "Finiish Execution.\n");
-    PacketPtr pkt = Packet::createWrite(req);
-    pkt->allocate();
-    pkt->makeResponse();
-    interuptPort.sendTimingResp(pkt);
+    accel->notifyDone();
 }
 
-bool PimCore::InteruptPort::recvTimingReq(PacketPtr pkt) {
-    pimcore->start();
-    return true;
-}
 
 }  // namespace gem5

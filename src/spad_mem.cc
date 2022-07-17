@@ -1,5 +1,4 @@
 #include "src/spad_mem.hh"
-
 #include "base/logging.hh"
 #include "base/trace.hh"
 #include "debug/SpadMem.hh"
@@ -11,6 +10,11 @@ SpadMem::SpadMem(const SpadMemParams &params)
       busy(false),
       dataPort(name() + ".dataPort", this),
       addrRanges(params.addrRanges.begin(), params.addrRanges.end()) {
+
+    for (int i=0;i<params.bankNum;i++){
+        dataBank.push_back(DataBank(params.wordNum,params.wordSize));
+    }
+
     DPRINTF(SpadMem, "Created the SpadMem object.\n");
 }
 

@@ -6,7 +6,3 @@ class SimpleAccelObj(ClockedObject):
     type = 'SimpleAccelObj'
     cxx_header = "src/simple_accelobj.hh"
     cxx_class = 'gem5::SimpleAccelObj'
-    spadMem = Param.SpadMem("Local input scratchpad.")
-    pimCore = Param.PimCore("PIM Core.")
-    interuptPort = RequestPort("Controller side port, sends requests")  
-

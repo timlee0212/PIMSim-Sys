@@ -9,12 +9,20 @@ namespace gem5 {
 SimpleAccelObj::SimpleAccelObj(const SimpleAccelObjParams &params)
     : ClockedObject(params),
       tickEvent(this),
-      mainState(Idle),
-      interuptPort(name() + ".interuptPort", this),
-      spadmem(params.spadMem),
-      pimcore(params.pimCore) {
+      mainState(Idle)
+      //spadmem(params.spadMem),
+      //pimcore(params.pimCore) 
+    {
     DPRINTF(SimpleAccelObj, "Created the Accelerator object\n");
     instCount = 0;
+}
+
+//void SimpleAccelObj::registerSpadMem(SpadMem *spadmem){
+//    this->spadmem.push_back(spadmem);/
+//}
+
+void SimpleAccelObj::registerPimCore(PimCore *pimcore){
+    this->pimcore.push_back(pimcore);
 }
 
 void SimpleAccelObj::startup() {
@@ -35,8 +43,8 @@ void SimpleAccelObj::step() {
             mainState = Idle;
             return;
         }
-        if (pimcore->isIdle()) {
-            pimcore->start();
+        if (pimcore[0]->isIdle()) {
+            pimcore[0]->start();
             DPRINTF(SimpleAccelObj, "Triggerred instruction %d.\n", instCount);
         }
     }
@@ -51,10 +59,4 @@ void SimpleAccelObj::notifyDone() {
     }
 }
 
-bool SimpleAccelObj::InteruptPort::recvTimingResp(PacketPtr pkt) {
-    accel->notifyDone();
-
-    // TODO: What the return value should be here?
-    return true;
-}
 }  // namespace gem5

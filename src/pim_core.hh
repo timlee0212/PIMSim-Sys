@@ -4,10 +4,12 @@
 #include "mem/port.hh"
 #include "params/PimCore.hh"
 #include "sim/clocked_object.hh"
+//#include "src/simple_accelobj.hh"
+
 
 namespace gem5 {
 
-class SimpleAccelObj;
+class PimAccel;
 
 class PimCore : public ClockedObject {
    public:
@@ -21,32 +23,9 @@ class PimCore : public ClockedObject {
     Port& getPort(const std::string& if_name, PortID idx) override {
         if (if_name == "dataPort")
             return dataPort;
-        else if (if_name == "interuptPort")
-            return interuptPort;
         else
             fatal("cannot resolve the port name " + if_name);
     }
-
-   public:
-    class InteruptPort : public ResponsePort {
-       public:
-        InteruptPort(const std::string& name, PimCore* owner)
-            : ResponsePort(name, owner), pimcore(owner) {}
-        AddrRangeList getAddrRanges() const override {
-            return AddrRangeList(1, AddrRange());
-        }
-
-        bool recvTimingReq(PacketPtr pkt);
-        void recvRespRetry() override{};
-
-        Tick recvAtomic(PacketPtr pkt) override { return 0; }
-        void recvFunctional(PacketPtr pkt) override {}
-
-       private:
-        PimCore* pimcore;
-    };
-
-    InteruptPort interuptPort;
 
    public:
     class DataPort : public RequestPort {
@@ -81,7 +60,12 @@ class PimCore : public ClockedObject {
     void finish();
 
    public:
+    void init() override;
+   public:
     RequestPtr req;
+
+   private:
+    PimAccel *accel;
 };
 }  // namespace gem5
 #endif

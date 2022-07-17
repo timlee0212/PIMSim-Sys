@@ -4,8 +4,33 @@
 #include "mem/port.hh"
 #include "params/SpadMem.hh"
 #include "sim/clocked_object.hh"
+#include "debug/SpadMem.hh"
 
 namespace gem5 {
+
+class DataBank {
+ public:
+    DataBank(int word_num, int word_size) 
+    : wordNum(word_num),
+      wordSize(word_size) {
+        memData.assign(word_num*word_size,0);
+      }
+
+  void writeData(int index, uint8_t* data, int size) {
+    assert(index < memData.size());
+    memcpy(&memData[index], data, size);
+  }
+
+  void readData(int index, uint8_t* data, int size) {
+    assert(index < memData.size());
+    memcpy(data, &memData[index], size);
+  }
+
+ protected:
+  int wordNum;
+  int wordSize;
+  std::vector<uint8_t> memData;
+};    
 
 class SpadMem : public ClockedObject {
    public:
@@ -55,6 +80,9 @@ class SpadMem : public ClockedObject {
     bool busy;
     DataPort dataPort;
     AddrRangeList addrRanges;
+
+    std::vector<DataBank> dataBank;
+
 };
 
 }  // namespace gem5
