@@ -1,7 +1,8 @@
 #ifndef __PIMIO_DEFINES_HH__
 #define __PIMIO_DEFINES_HH__
 
-namespace gem5 {
+namespace gem5
+{
 /* Shared fields for CTRL and STAT registers */
 #define PIMIO_DEV_TYPE 0x2
 #define PIMIO_CMD_COMP 0x1
@@ -19,20 +20,23 @@ namespace gem5 {
 #define PIMIO_IOCTL_COMPUTE 0x01
 #define PIMIO_IOCTL_STATUS 0x02
 // Structure for device registers
-struct pimio_transfer_args {
+struct pimio_transfer_args
+{
     uint64_t memAddr;
     uint16_t wlAddr;
     int reqLen;
     bool writeOp;
 };
 
-struct pimio_compute_args {
+struct pimio_compute_args
+{
     uint64_t memAddr;
     uint16_t wlAddr;
     uint8_t srcOp;
 };
 
-struct pimio_csr_args {
+struct pimio_csr_args
+{
     bool error;
     bool busy;
     uint16_t wlSize;
@@ -40,7 +44,8 @@ struct pimio_csr_args {
 };
 
 // Register Map
-enum {
+enum
+{
     PIMIO_CONF,
     PIMIO_MADDR,
     PIMIO_PADDR,

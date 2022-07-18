@@ -1,20 +1,23 @@
 #ifndef __DEV_PIMIO_DEV_HH__
 #define __DEV_PIMIO_DEV_HH__
 
+#include "pimio_driver.hh"
+
 #include "debug/PIMIODev.hh"
 #include "debug/assertions.h"
 #include "dev/dma_device.hh"
 #include "dev/io_device.hh"
 #include "dev/platform.hh"
 #include "params/PIMIODev.hh"
-#include "pimio_driver.hh"
 #include "sim/full_system.hh"
 #include "sim/system.hh"
 
-namespace gem5 {
+namespace gem5
+{
 
 // DIRTY IMPLEMENTATION, MIXED SE AND FS IMPLEMENTATION
-class PIMIODev : public DmaDevice {
+class PIMIODev : public DmaDevice
+{
    protected:
     const ByteOrder byteOrder = ByteOrder::little;
     // Platform *platform;

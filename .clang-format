@@ -1,0 +1,28 @@
+BasedOnStyle: Google
+UseTab: Never
+IndentWidth: 4
+TabWidth: 4
+ColumnLimit: 79
+BreakBeforeBraces: Allman
+AlwaysBreakAfterReturnType: AllDefinitions
+IncludeCategories:
+  - Regex:           '<Python.h>'
+    Priority:        4
+    CaseSensitive:   true
+  - Regex:           '^\"[^/]+\.hh\"'
+    Priority:        5
+    CaseSensitive:   true
+  - Regex:           '^<.+.h>$"'
+    Priority:        6
+    CaseSensitive:   true
+  - Regex:           '^<.+>$"'
+    Priority:        7
+    CaseSensitive:   true
+  - Regex:           '^<gem5.+>$"'
+    Priority:        8
+    CaseSensitive:   true
+  - Regex:           '^\"(?:base|cpu|params|sim|arch|dev|doc|doxygen|gpu-compute|kern|learning_gem5|mem|proto|python|sst|systemc)?/.+\.hh\"$'
+    Priority:        9
+    CaseSensitive:   true        
+  - Regex:           '.*'
+    Priority:        10

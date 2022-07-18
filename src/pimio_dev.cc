@@ -27,14 +27,15 @@
  */
 
 #include "pimio_dev.hh"
+#include "pimio_defines.hh"
 
 #include "debug/PIMIODev.hh"
 #include "dev/dma_device.hh"
 #include "mem/packet_access.hh"
 #include "params/PIMIODev.hh"
-#include "pimio_defines.hh"
 
-namespace gem5 {
+namespace gem5
+{
 
 PIMIODev::PIMIODev(const Params &params)
     : DmaDevice(params),
@@ -45,7 +46,8 @@ PIMIODev::PIMIODev(const Params &params)
       pioSize(params.pio_size),
       PIMDevIntID(params.int_id),
       n_wl(params.cb_n_wl),
-      nbyte_bl(params.cb_nb_bl) {
+      nbyte_bl(params.cb_nb_bl)
+{
     gem5_assert(n_wl * nbyte_bl <= cb_store.max_size(),
                 "Selected PIM size exceed possible space for data structure!");
     cb_store.assign(nbyte_bl * n_wl, 0);
@@ -55,25 +57,32 @@ PIMIODev::PIMIODev(const Params &params)
         nbyte_bl, n_wl, pioAddr);
 }
 
-void PIMIODev::dmaEventDone() {
+void
+PIMIODev::dmaEventDone()
+{
     int64_t _offset = wl_addr * nbyte_bl;
-    if (writeOp) {
+    if (writeOp)
+    {
         memcpy((void *)(cb_store.data() + _offset), (void *)reqData, reqLen);
     }
     delete[] reqData;
     busy = false;
     DPRINTF(PIMIODev, "Done with DMA event\n");
-    if (_driver) {
+    if (_driver)
+    {
         _driver->signalWakeup();
     }
     // platform->postPciInt(PIMDevIntID);
 }
 
-uint64_t PIMIODev::PIMRegRead(const uint8_t addr) {
+uint64_t
+PIMIODev::PIMRegRead(const uint8_t addr)
+{
     uint64_t r = 0;
 
     // Each register is 32-bit
-    switch (addr >> 2) {
+    switch (addr >> 2)
+    {
         case PIMIO_CONF:
             r = n_wl << 16 | nbyte_bl;
             DPRINTF(PIMIODev, "Read PIMIO_CONF: %d\n", r);
@@ -97,10 +106,12 @@ uint64_t PIMIODev::PIMRegRead(const uint8_t addr) {
 
         case PIMIO_STAT:
             r = busy;
-            if (writeOp) {
+            if (writeOp)
+            {
                 r |= PIMIO_DEV_TYPE;  // Write command
             }
-            if (err) {
+            if (err)
+            {
                 r |= PIMIO_DEV_ERRR;  // Error
             }
             DPRINTF(PIMIODev, "Read PIMIO_DEV_STAT: %d\n", r);
@@ -119,10 +130,13 @@ uint64_t PIMIODev::PIMRegRead(const uint8_t addr) {
     return r;
 }
 
-void PIMIODev::PIMRegWrite(const uint8_t addr, uint64_t val64) {
+void
+PIMIODev::PIMRegWrite(const uint8_t addr, uint64_t val64)
+{
     uint32_t val = val64;
 
-    switch (addr >> 2) {
+    switch (addr >> 2)
+    {
         case PIMIO_MADDR:
             mem = val;
             DPRINTF(PIMIODev, "Write PIMIO_MADDR: %#llx\n", val);
@@ -142,12 +156,15 @@ void PIMIODev::PIMRegWrite(const uint8_t addr, uint64_t val64) {
 
         case PIMIO_CTL:
             // Perform command
-            if (!busy) {
+            if (!busy)
+            {
                 err = false;
                 compOp = val & PIMIO_CMD_COMP;
                 writeOp = (val & PIMIO_DEV_TYPE) && !compOp;
                 PIMCmd();
-            } else {
+            }
+            else
+            {
                 panic(
                     "Attempting to write to PIMIO device while transfer"
                     " is ongoing!\n");
@@ -163,11 +180,16 @@ void PIMIODev::PIMRegWrite(const uint8_t addr, uint64_t val64) {
     }
 }
 
-void PIMIODev::PIMCmd(void) {
+void
+PIMIODev::PIMCmd(void)
+{
     // Check parameters
-    if ((uint16_t)wl_addr > n_wl) {
+    if ((uint16_t)wl_addr > n_wl)
+    {
         panic("Bad Wordline Address!\n");
-    } else if (!compOp && reqLen % nbyte_bl != 0) {
+    }
+    else if (!compOp && reqLen % nbyte_bl != 0)
+    {
         panic("Read/Write length must align with the crossbar width!\n");
     }
     DPRINTF(PIMIODev, "Execute Command, Write:%s, Compute:%s\n",
@@ -181,28 +203,39 @@ void PIMIODev::PIMCmd(void) {
 
     // TODO: Modify to correct PIM behavior. Currently we assume 8bit uint
     // integer multiply each 8-bit uint stored in crossbar
-    if (compOp) {
-        for (int i = 0; i < nbyte_bl; i++) {
+    if (compOp)
+    {
+        for (int i = 0; i < nbyte_bl; i++)
+        {
             reqData[i] = static_cast<uint8_t>(cb_store[_offset + i] * src_op);
         }
-    } else if (!writeOp) {
-        memcpy(reqData, cb_store.data() + _offset, reqLen);
     }
-    if (!writeOp) {
+    else if (!writeOp)
+    {
+        memcpy((void *)reqData, (void *)(cb_store.data() + _offset), reqLen);
+    }
+    if (!writeOp)
+    {
         // Read command (block -> mem)
-        dmaWrite(mem, reqLen, &dmaEvent, reqData, 0);
-    } else {
+        dmaWrite(mem, reqLen, &dmaEvent, reqData, cyclesToTicks(Cycles(5)));
+    }
+    else
+    {
         // Write command (mem -> block)
-        dmaRead(mem, reqLen, &dmaEvent, reqData, 0);
+        dmaRead(mem, reqLen, &dmaEvent, reqData, cyclesToTicks(Cycles(5)));
     }
 }
 
-AddrRangeList PIMIODev::getAddrRanges() const {
+AddrRangeList
+PIMIODev::getAddrRanges() const
+{
     AddrRangeList ranges = {RangeSize(pioAddr, pioSize)};
     return ranges;
 }
 
-Tick PIMIODev::read(PacketPtr pkt) {
+Tick
+PIMIODev::read(PacketPtr pkt)
+{
     Addr addr = pkt->getAddr() - pioAddr;
 
     DPRINTF(PIMIODev, "Read request - addr: %#x, size: %#x\n", addr,
@@ -216,7 +249,9 @@ Tick PIMIODev::read(PacketPtr pkt) {
     return pioDelay;
 }
 
-Tick PIMIODev::write(PacketPtr pkt) {
+Tick
+PIMIODev::write(PacketPtr pkt)
+{
     Addr daddr = pkt->getAddr() - pioAddr;
 
     DPRINTF(PIMIODev, "Write register %#x value %#x\n", daddr,
@@ -231,37 +266,52 @@ Tick PIMIODev::write(PacketPtr pkt) {
 }
 
 // SE Functionalities
-uint64_t PIMIODev::SE_RegRead(const uint8_t addr) {
+uint64_t
+PIMIODev::SE_RegRead(const uint8_t addr)
+{
     gem5_assert(!FullSystem,
                 "This function should only be accessed in SE mode.");
     return PIMRegRead(addr);
 }
-void PIMIODev::SE_RegWrite(const uint8_t addr, uint64_t val64) {
+void
+PIMIODev::SE_RegWrite(const uint8_t addr, uint64_t val64)
+{
     gem5_assert(!FullSystem,
                 "This function should only be accessed in SE mode.");
     PIMRegWrite(addr, val64);
 }
-void PIMIODev::SE_PIMCmd(bool write, bool compute) {
+void
+PIMIODev::SE_PIMCmd(bool write, bool compute)
+{
     gem5_assert(!FullSystem,
                 "This function should only be accessed in SE mode.");
-    if (!busy) {
+    if (!busy)
+    {
         err = false;
         compOp = compute;
         writeOp = write;
         PIMCmd();
-    } else {
+    }
+    else
+    {
         panic(
             "Attempting to write to PIMIO device while transfer"
             " is ongoing!\n");
     }
 }
 
-void PIMIODev::attachDriver(PIMIODriver *driver) {
+void
+PIMIODev::attachDriver(PIMIODriver *driver)
+{
     fatal_if(_driver, "Should not overwrite driver.");
     _driver = driver;
     assert(_driver);
 }
 
-PIMIODriver *PIMIODev::driver() const { return _driver; }
+PIMIODriver *
+PIMIODev::driver() const
+{
+    return _driver;
+}
 
 }  // namespace gem5

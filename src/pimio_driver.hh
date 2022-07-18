@@ -1,17 +1,22 @@
 #ifndef __PIMIO_DRIVER_HH__
 #define __PIMIO_DRIVER_HH__
+
+#include "pimio_dev.hh"
+
 #include "debug/PIMIODev.hh"
 #include "mem/request.hh"
 #include "params/PIMIODriver.hh"
-#include "pimio_dev.hh"
 #include "sim/emul_driver.hh"
 
-namespace gem5 {
+namespace gem5
+{
 
-class PIMIODriver final : public EmulatedDriver {
+class PIMIODriver final : public EmulatedDriver
+{
    private:
     PIMIODev *device;
-    ThreadContext *sleep_tc;    //Store the thread that slept. We should only have one suspended thread
+    ThreadContext *sleep_tc;  // Store the thread that slept. We should only
+                              // have one suspended thread
 
    public:
     PARAMS(PIMIODriver);
