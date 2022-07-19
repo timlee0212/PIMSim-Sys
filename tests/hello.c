@@ -6,13 +6,16 @@
 #include <sys/ioctl.h>
 #include "pimio.h"
 
+#define TEST_SIZE 128
+#define CACHELINE_SIZE 64
+
 #define BOOLSTR(val) (val ? "true" : "false")
 
 int main(void) {
-    __uint8_t *srcdata = (__uint8_t *)malloc(512 * sizeof(__uint8_t));
-    for (int i = 0; i < 256; i++) {
+    __uint8_t *srcdata = (__uint8_t *)aligned_alloc(CACHELINE_SIZE, TEST_SIZE * 2 * sizeof(__uint8_t));
+    for (int i = 0; i < TEST_SIZE; i++) {
         srcdata[i] = i;
-        srcdata[256 + i] = 0;
+        srcdata[TEST_SIZE+i] = 0;
     }
 
     int pim_fd = open("/dev/pimio", O_RDWR);
@@ -41,14 +44,14 @@ int main(void) {
         printf("Loop back at %d: %d\n", i, srcdata[256 + i]);
     }
 
-    //printf("=========== Test 2: Compute =============\n");
+    // printf("=========== Test 2: Compute =============\n");
 
-    //__uint8_t *result = (__uint8_t *)malloc(csr.blBytes * sizeof(__uint8_t));
-    //struct pimio_compute_args comp = {
-    //    .memAddr = result, .wlAddr = 0x10, .srcOp = 2};
-    //ioctl(pim_fd, PIMIO_IOCTL_COMPUTE, &comp);
-    //for (int i = 0; i < csr.blBytes; i++) {
-    //    printf("Compute result at %d: %d\n", i, result[i]);
-    //}
+    // //__uint8_t *result = (__uint8_t *)malloc(csr.blBytes * sizeof(__uint8_t));
+    // struct pimio_compute_args comp = {
+    //     .hostMemAddr = srcdata, .devMemAddr = 0x10, .instruction = 2};
+    // ioctl(pim_fd, PIMIO_IOCTL_COMPUTE, &comp);
+    // //for (int i = 0; i < csr.blBytes; i++) {
+    // //    printf("Compute result at %d: %d\n", i, result[i]);
+    // //}
     return 0;
 }

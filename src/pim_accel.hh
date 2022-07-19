@@ -33,20 +33,14 @@ class PimAccel : public DmaDevice {
     void dmaEventDone();
 
    private:
-    uint8_t *dmaReqData;
+    std::vector<uint8_t> dmaBuffer;
     int dmaReqLen = 0;
-    //Addr wl_addr = 0;
     Addr hostMemAddr = 0;
-    //uint8_t src_op = 0;
-
-    // storage of the crossbar content
-    // std::vector<uint8_t> memData;
 
     // Functional access
     uint64_t devConfigRegRead(const uint8_t addr);
     void devConfigRegWrite(const uint8_t addr, uint64_t val64);
     void executeDevCmd(uint32_t dev_instruction);
-
 
    public:
     PARAMS(PimAccel);
@@ -70,7 +64,6 @@ class PimAccel : public DmaDevice {
 
    public:
 
-
     void executePimFunction();
     void notifyDone();
 
@@ -83,12 +76,10 @@ class PimAccel : public DmaDevice {
     std::vector<PimCore*> pimcore;
     SpadMem* spadmem;
 
-    std::vector<uint8_t> memData;
-
-
+    RequestPtr req;
 
 };
 
 }  // namespace gem5
 
-#endif  // __DEV_PIMIO_DEV_HH_
+#endif  // __PIM_ACCEL_HH__

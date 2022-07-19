@@ -13,17 +13,15 @@ class DataBank {
     DataBank(int word_num, int word_size) 
     : wordNum(word_num),
       wordSize(word_size) {
-        memData.assign(word_num*word_size,0);
+        memData.assign(word_num*word_size,12);
       }
 
-  void writeData(int index, uint8_t* data, int size) {
-    assert(index < memData.size());
-    memcpy(&memData[index], data, size);
+  void writeData(Addr addr, uint8_t* data, int size) {
+    memcpy(&memData[addr], data, size);   
   }
 
-  void readData(int index, uint8_t* data, int size) {
-    assert(index < memData.size());
-    memcpy(data, &memData[index], size);
+  void readData(Addr addr, uint8_t* data, int size) {
+    memcpy(data, &memData[addr], size);
   }
 
  protected:
@@ -77,11 +75,22 @@ class SpadMem : public ClockedObject {
     bool handleRequest(PacketPtr pkt);
     void sendResponse(PacketPtr pkt);
 
-    bool busy;
+   public:
+
+    int addressDecode(Addr addr);
+
+    std::vector<bool> busy;
     DataPort dataPort;
     AddrRangeList addrRanges;
 
     std::vector<DataBank> dataBank;
+    
+   private:
+    int wordNum;
+    int wordSize;
+    int bankNum;
+
+
 
 };
 

@@ -11,6 +11,8 @@ Source('pim_accel.cc')
 Source('pimio_driver.cc')
 Source('spad_mem.cc')
 Source('pim_core.cc')
+Source('fetch_unit.cc')
+Source('commit_unit.cc')
 
 DebugFlag('SimpleAccelObj')
 DebugFlag('PimAccel')

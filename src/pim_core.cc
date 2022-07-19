@@ -10,21 +10,17 @@ namespace gem5 {
 
 PimCore::PimCore(const PimCoreParams &params)
     : ClockedObject(params),
-      dataReadEvent(this),
-      computeEvent(this),
-      dataWriteEvent(this),
-      dataPort(name() + ".dataPort", this),
-      dataReadState(Idle),
-      computeState(Idle),
-      dataWriteState(Idle),
       accel(params.accel)
-// accel(params.accel)
 {
     DPRINTF(PimCore, "Created the PimCore object\n");
-    Request::Flags flags;
-    Addr addr = 0;
-    unsigned int size = 64;
-    req = std::make_shared<Request>(addr, size, flags, 0);
+
+    inputReg.assign(1024,0);
+    fetchUnit = new FetchUnit(name(),this);
+    fetchUnit->setOutputReg(inputReg.data());
+
+    outputReg.assign(1024,0);    
+    commitUnit = new CommitUnit(name(),this);
+    commitUnit->setInputReg(outputReg.data());    
 }
 
 void 
@@ -36,66 +32,42 @@ PimCore::init()
 bool
 PimCore::isIdle() 
 {
-    return (dataReadState == Idle && computeState == Idle &&
-            dataWriteState == Idle);
+    return (fetchUnit->isIdle() && commitUnit->isIdle());
 }
 
 void
 PimCore::start() 
 {
-    DPRINTF(PimCore, "Tiggerred PIM Core.\n");
-    schedule(dataReadEvent, clockEdge(Cycles(1)));
+    Addr addr = 0;
+    DPRINTF(PimCore, "Finish data fetch.\n");       
+    fetchUnit->fetch(addr);
 }
 
 void
-PimCore::dataRead() 
-{
-    dataReadState = Busy;
-    DPRINTF(PimCore, "Request for data fetch.\n");
-    PacketPtr pkt = Packet::createRead(req);
-    pkt->allocate();
-    dataPort.sendTimingReq(pkt);
+PimCore::notifyFetchDone(){
+    DPRINTF(PimCore, "Finish data fetch.\n");   
+    compute();
 }
 
-bool 
-PimCore::DataPort::recvTimingResp(PacketPtr pkt) 
-{
-    if (pkt->isRead()) {
-        pimcore->dataReadState = Idle;
-        pimcore->compute();
-    } else if (pkt->isWrite()) {
-        pimcore->dataWriteState = Idle;
-        pimcore->finish();
+void
+PimCore::compute(){
+    DPRINTF(PimCore, "Finish computation commit.\n");   
+    for(int i=0;i<128;i++){
+        outputReg[i] = inputReg[i] + 4;
     }
-    return true;
+    Addr addr = 0;    
+    commitUnit->commit(addr);
 }
 
-void 
-PimCore::compute() 
-{
-    if (computeState == Idle) {
-        computeState = Busy;
-        DPRINTF(PimCore, "Start to compute.\n");
-        schedule(computeEvent, clockEdge(Cycles(100)));
-    } else if (computeState == Busy) {
-        computeState = Idle;
-        DPRINTF(PimCore, "Finish to compute.\n");
-        schedule(dataWriteEvent, clockEdge(Cycles(1)));
-    }
-}
-
-void 
-PimCore::dataWrite() {
-    dataWriteState = Busy;
-    DPRINTF(PimCore, "Write back data.\n");
-    PacketPtr pkt = Packet::createWrite(req);
-    pkt->allocate();
-    dataPort.sendTimingReq(pkt);
+void
+PimCore::notifyCommitDone(){
+    DPRINTF(PimCore, "Finish data commit.\n");   
+    finish(); 
 }
 
 void 
 PimCore::finish() {
-    DPRINTF(PimCore, "Finiish Execution.\n");
+    DPRINTF(PimCore, "Finish Execution.\n");
     accel->notifyDone();
 }
 

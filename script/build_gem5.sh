@@ -1,5 +1,5 @@
 #!/bin/bash
-arch=${1:-"RISCV"}
+arch=${1:-"X86"}
 build_mode=${2:-"opt"}
 
 export CCFLAGS_EXTRA="-Wall -Werror"

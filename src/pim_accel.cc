@@ -45,10 +45,9 @@ PimAccel::PimAccel(const Params &params)
       pioSize(params.pio_size),
       PimAccelIntID(params.int_id),
       mainState(Idle){
-    DPRINTF(
-        PimAccel,
-        "PIM accelerator initalized!");
-        memData.assign(1024,0);
+    DPRINTF(PimAccel,"PIM accelerator initalized!");
+        dmaBuffer.assign(sys->cacheLineSize(),0);
+    DPRINTF(PimAccel,"DMA Buffer Size %d,\n",dmaBuffer.size());        
 }
 
 void 
@@ -56,10 +55,11 @@ PimAccel::dmaEventDone()
 {
     DPRINTF(PimAccel, "DMA Event Done is notified.\n");
     if (mainState==WaitForDMALoad) {
-        memcpy((void *)(memData.data()), (void *)dmaReqData, dmaReqLen);
-        DPRINTF(PimAccel, "Finish data transfer from host to device.\n");
+        //memcpy((void *)(dmaBuffer.data()), (void *)dmaReqData, dmaReqLen);
+        Addr addr = 0;
+        DPRINTF(PimAccel, "Finish data transfer from host to device.\n");     
+        spadmem->accessFunctional(addr, dmaReqLen, dmaBuffer.data(), false);       
     }
-    delete[] dmaReqData;
     mainState = Idle;
     DPRINTF(PimAccel, "Done with DMA event\n");
     if (!FullSystem) {
@@ -154,20 +154,18 @@ PimAccel::executeDevCmd(uint32_t dev_instruction)
     switch(dev_instruction){
         case PIMIO_CMD_COMP:
             mainState = WaitForComputing;
+            DPRINTF(PimAccel, "Start to trigger PIM function.\n");              
             executePimFunction();
             break;
         case PIMIO_CMD_STORE:
             mainState = WaitForDMAStore;
-            dmaReqData = new uint8_t[dmaReqLen];
-            memcpy(dmaReqData, memData.data(), dmaReqLen);
             DPRINTF(PimAccel, "Execute a DMA Store Command to hostMemAddr:%d with length of %d.\n",hostMemAddr,dmaReqLen);            
-            dmaWrite(hostMemAddr, dmaReqLen, &dmaEvent, dmaReqData, 0);
+            dmaWrite(hostMemAddr, dmaReqLen, &dmaEvent, dmaBuffer.data(), 0);
             break;
         case PIMIO_CMD_LOAD:
             mainState = WaitForDMALoad;
-            dmaReqData = new uint8_t[dmaReqLen];
             DPRINTF(PimAccel, "Execute a DMA Load Command from hostMemAddr:%d with length of %d.\n",hostMemAddr,dmaReqLen);            
-            dmaRead(hostMemAddr, dmaReqLen, &dmaEvent, dmaReqData, 0);
+            dmaRead(hostMemAddr, dmaReqLen, &dmaEvent, dmaBuffer.data(), 0);
             break;
         default:
             panic(
@@ -180,8 +178,8 @@ PimAccel::executeDevCmd(uint32_t dev_instruction)
 void
 PimAccel::executePimFunction(){
     if (pimcore[0]->isIdle()) {
+        DPRINTF(PimAccel, "Triggerred pim function.\n");        
         pimcore[0]->start();
-        DPRINTF(PimAccel, "Triggerred pim function.\n");
     }    
 
 }
