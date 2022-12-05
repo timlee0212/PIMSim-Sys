@@ -8,4 +8,4 @@ build_mode=${2:-"opt"}
                             CCFLAGS_EXTRA="-Wall" \
                             EXTRAS=./src \
                             ./build/$arch/gem5.$build_mode \
-                            -j $(($(nproc --all)/2))
+                            -j $(($(nproc --all)))
