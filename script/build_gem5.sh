@@ -1,6 +1,6 @@
 #!/bin/bash
 
-arch=${1:-"RISCV"}
+arch=${1:-"X86"}
 build_mode=${2:-"opt"}
 
 /usr/bin/env python3 $(which scons) \
